@@ -1,5 +1,11 @@
-name: Build Mesa 25.3.4 Mali
-on: [workflow_dispatch]
+name: Mesa 25.3.4
+
+on:
+  push:
+    branches: [ main ]      
+  pull_request:
+    branches: [ main ]     
+  workflow_dispatch:        
 
 jobs:
   build:
@@ -8,12 +14,13 @@ jobs:
       - name: Install Build Tools
         run: |
           sudo apt update
-          sudo apt install -y meson ninja-build pkg-config python3-mako
-      
+          sudo apt install -y meson ninja-build pkg-config python3-mako libdrm-dev
+
       - name: Setup Android NDK
         uses: nttld/setup-ndk@v1
+        id: setup-ndk
         with:
-          ndk-version: r26d # Matches modern Wine 10 requirements
+          ndk-version: r26d
 
       - name: Download & Extract Source
         run: |
@@ -21,21 +28,23 @@ jobs:
           tar -xf mesa-25.3.4.tar.xz
           mv mesa-25.3.4 src
 
-      - name: Configure & Compile
+      - name: Configure Mesa for Mali
         run: |
           cd src
-          # Cross-compiling specifically for Mali G52/AArch64
+          # Fix: Using the dynamic NDK path to find the toolchain
           meson setup build \
-            --cross-file /usr/local/lib/android/sdk/ndk/r26d/build/cmake/android.toolchain.cmake \
+            --cross-file ${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
             -Dplatforms=android \
             -Dgallium-drivers=panfrost,zink \
             -Dvulkan-drivers=panfrost \
             -Dbuildtype=release \
             -Dandroid-stub=true
-          ninja -C build
+      
+      - name: Compile
+        run: ninja -C src/build
 
-      - name: Upload Artifacts
+      - name: Upload Mali Driver
         uses: actions/upload-artifact@v4
         with:
-          name: Mesa-25.3.4-Mali
+          name: Mesa-25.3.4-Mali-G52
           path: src/build/src/gallium/targets/dri/libgallium_dri.so
