@@ -12,7 +12,6 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y ninja-build pkg-config python3-mako libdrm-dev libidn12
-          # Fixing the Exit Code 127 for CMake 3.6.0
           sudo ln -s /usr/lib/x86_64-linux-gnu/libidn.so.12 /usr/lib/x86_64-linux-gnu/libidn.so.11
 
       - name: Setup CMake 3.6.0
@@ -32,7 +31,11 @@ jobs:
           tar -xf mesa-25.3.4.tar.xz
           mv mesa-25.3.4 src
 
-      - name: Configure & Compile
+      - name: Configure & Compile with Clang
+        env:
+          # Explicitly pointing to the Clang compiler for AArch64
+          CC: ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android34-clang
+          CXX: ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android34-clang++
         run: |
           cd src
           meson setup build \
@@ -47,6 +50,5 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          # This names it exactly as you requested
           name: Mesa 25.3.4 Winlator
           path: src/build/src/gallium/targets/dri/libgallium_dri.so
