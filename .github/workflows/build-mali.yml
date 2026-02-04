@@ -8,11 +8,18 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Install Build Tools & Fix Legacy CMake
+      - name: Install System Dependencies
         run: |
           sudo apt update
           sudo apt install -y ninja-build pkg-config python3-mako libdrm-dev libidn12
+          # Fixing the legacy CMake library link
           sudo ln -s /usr/lib/x86_64-linux-gnu/libidn.so.12 /usr/lib/x86_64-linux-gnu/libidn.so.11
+
+      # THE FIX: Installing Meson via Python ensures it's in the PATH
+      - name: Install Meson and Ninja via Pip
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install meson ninja
 
       - name: Setup CMake 3.6.0
         uses: jwlawson/actions-setup-cmake@v2
@@ -33,12 +40,12 @@ jobs:
 
       - name: Configure & Compile with Clang
         env:
-          # Explicitly pointing to the Clang compiler for AArch64
           CC: ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android34-clang
           CXX: ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android34-clang++
         run: |
           cd src
-          meson setup build \
+          # We use "python3 -m meson" to be 100% sure the command is found
+          python3 -m meson setup build \
             --cross-file ${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
             -Dplatforms=android \
             -Dgallium-drivers=panfrost,zink \
