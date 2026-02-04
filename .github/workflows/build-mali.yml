@@ -1,11 +1,8 @@
-name: Mesa 25.3.4
-
+name: Mesa 25.3.4 Mali (Legacy CMake)
 on:
   push:
-    branches: [ main ]      
-  pull_request:
-    branches: [ main ]     
-  workflow_dispatch:        
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -14,7 +11,13 @@ jobs:
       - name: Install Build Tools
         run: |
           sudo apt update
-          sudo apt install -y meson ninja-build pkg-config python3-mako libdrm-dev
+          sudo apt install -y ninja-build pkg-config python3-mako libdrm-dev
+
+      # FORCING CMAKE 3.6.0
+      - name: Setup CMake 3.6.0
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.6.0'
 
       - name: Setup Android NDK
         uses: nttld/setup-ndk@v1
@@ -28,10 +31,12 @@ jobs:
           tar -xf mesa-25.3.4.tar.xz
           mv mesa-25.3.4 src
 
-      - name: Configure Mesa for Mali
+      - name: Configure Mesa
         run: |
           cd src
-          # Fix: Using the dynamic NDK path to find the toolchain
+          # Verifying CMake version for your experiment
+          cmake --version 
+          
           meson setup build \
             --cross-file ${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
             -Dplatforms=android \
