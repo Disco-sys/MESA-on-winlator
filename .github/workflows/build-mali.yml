@@ -1,4 +1,4 @@
-name: Mesa 25.3.4 Mali (Legacy CMake)
+name: Mesa 25.3.4 Winlator Builder
 on:
   push:
     branches: [ main ]
@@ -8,12 +8,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Install Build Tools
+      - name: Install Build Tools & Fix Legacy CMake
         run: |
           sudo apt update
-          sudo apt install -y ninja-build pkg-config python3-mako libdrm-dev
+          sudo apt install -y ninja-build pkg-config python3-mako libdrm-dev libidn12
+          # Fixing the Exit Code 127 for CMake 3.6.0
+          sudo ln -s /usr/lib/x86_64-linux-gnu/libidn.so.12 /usr/lib/x86_64-linux-gnu/libidn.so.11
 
-      # FORCING CMAKE 3.6.0
       - name: Setup CMake 3.6.0
         uses: jwlawson/actions-setup-cmake@v2
         with:
@@ -31,12 +32,9 @@ jobs:
           tar -xf mesa-25.3.4.tar.xz
           mv mesa-25.3.4 src
 
-      - name: Configure Mesa
+      - name: Configure & Compile
         run: |
           cd src
-          # Verifying CMake version for your experiment
-          cmake --version 
-          
           meson setup build \
             --cross-file ${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
             -Dplatforms=android \
@@ -44,12 +42,11 @@ jobs:
             -Dvulkan-drivers=panfrost \
             -Dbuildtype=release \
             -Dandroid-stub=true
-      
-      - name: Compile
-        run: ninja -C src/build
+          ninja -C build
 
-      - name: Upload Mali Driver
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Mesa-25.3.4-Mali-G52
+          # This names it exactly as you requested
+          name: Mesa 25.3.4 Winlator
           path: src/build/src/gallium/targets/dri/libgallium_dri.so
